@@ -51,7 +51,7 @@ def check_availability(district, date):
 def parse_avalability(availability: dict):
     for center in availability['centers']:
         for session in center['sessions']:
-            if session['min_age_limit'] < AGE_LIMIT and session["available_capacity"] < 0:
+            if session['min_age_limit'] < AGE_LIMIT and session["available_capacity"] > 0:
                 return session['session_id'], session['slots']
     return None, None
 
