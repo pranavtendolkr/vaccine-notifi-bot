@@ -32,7 +32,10 @@ HEADERS = {
 }
 
 log = logging.getLogger()
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+log.addHandler(handler)
+
 
 # process:
 # 1. check slots
@@ -49,11 +52,12 @@ def check_availability(district, date):
 
 # 2. parse slots to get info for booking API
 def parse_avalability(availability: dict):
+    available_slots = []
     for center in availability['centers']:
         for session in center['sessions']:
-            if session['min_age_limit'] < AGE_LIMIT and session["available_capacity"] < 0:
-                return session['session_id'], session['slots']
-    return None, None
+            if session['min_age_limit'] < AGE_LIMIT and session["available_capacity"] > 0:
+                available_slots.append((session['session_id'], session['slots']))
+    return available_slots
 
 
 def get_benificiary_from_token(token):
@@ -67,17 +71,21 @@ def get_benificiary_from_token(token):
 
 
 # 3. call booking API
-def book_appointment(session_id, slots, token, captcha):
+def book_appointment(available_slots, token):
     benificiary = get_benificiary_from_token(token)
-    post_payload = {
-        "dose": 1,
-        "session_id": session_id,
-        "slot": slots[0],
-        "beneficiaries": [benificiary],
-        "captcha": captcha
-    }
-    response = requests.post(url=SCHEDULE_URL, headers=HEADERS, json=post_payload)
-    print(response.text)
+    for session_id, slots in available_slots:
+        captcha = solve_captcha()
+        post_payload = {
+            "dose": 1,
+            "session_id": session_id,
+            "slot": slots[0],
+            "beneficiaries": [benificiary],
+            "captcha": captcha
+        }
+        response = requests.post(url=SCHEDULE_URL, headers=HEADERS, json=post_payload)
+        print(response.text)
+        if response.status_code == 200:
+            break
 
 
 def solve_captcha():
@@ -100,11 +108,10 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         TOKEN = sys.argv[1]
     availability = check_availability(district=DISTRICT, date=DATE)
-    session_id, slots = parse_avalability(availability)
-    print(session_id, slots)
-    if session_id:
-        captcha = solve_captcha()
-        book_appointment(session_id, slots, TOKEN, captcha)
+    available_slots = parse_avalability(availability)
+    print(available_slots)
+    if available_slots:
+        book_appointment(available_slots, TOKEN)
 
 
 
