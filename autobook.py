@@ -12,15 +12,17 @@ import subprocess, os, platform
 # login on cowin, open dev console -> applications -> session storage -> selfregistration.cowin.gov.in -> usertoken
 # fill this in
 TOKEN = ""
+PREFERRED_PIN_CODE = "403507"
+PREFERRED_CITY = "Mapusa"
 
-
-CHECK_URL = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id={0}&date={1}"
+# CHECK_URL = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id={0}&date={1}"
+CHECK_URL = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/calendarByDistrict?district_id={0}&date={1}"
 SCHEDULE_URL = "https://cdn-api.co-vin.in/api/v2/appointment/schedule"
 CAPTCHA_URL = "https://cdn-api.co-vin.in/api/v2/auth/getRecaptcha"
 
 DISTRICT = 151
 # one day will get us the entire week
-DATE = "17-05-2021"
+DATE = "15-05-2021"
 # search for age limit less than:
 AGE_LIMIT = 45
 
@@ -42,7 +44,7 @@ log.addHandler(handler)
 def check_availability(district, date):
     try:
         log.info("checking for district %s for date %s", district, date)
-        response = requests.get(CHECK_URL.format(district, date), headers={"user-agent": USER_AGENT})
+        response = requests.get(CHECK_URL.format(district, date), headers=HEADERS)
         response.raise_for_status()
         return response.json()
     except RequestException as ex:
@@ -56,7 +58,19 @@ def parse_avalability(availability: dict):
     for center in availability['centers']:
         for session in center['sessions']:
             if session['min_age_limit'] < AGE_LIMIT and session["available_capacity"] > 0:
-                available_slots.append((session['session_id'], session['slots']))
+                available_slot = {"session_id" : session['session_id'],
+                                   "slots": session['slots'],
+                                  "name": center['name'],
+                                  "pincode": center['pincode'] }
+                available_slots.append(available_slot)
+
+    for count, available_slot in enumerate(available_slots):
+        if PREFERRED_CITY.lower() in available_slot.get('name').lower():
+            available_slots.insert(0,  available_slots.pop(count))
+            continue
+        elif available_slot.get('pincode') == PREFERRED_PIN_CODE:
+            available_slots.insert(0,  available_slots.pop(count))
+            continue
     return available_slots
 
 
@@ -73,12 +87,12 @@ def get_benificiary_from_token(token):
 # 3. call booking API
 def book_appointment(available_slots, token):
     benificiary = get_benificiary_from_token(token)
-    for session_id, slots in available_slots:
+    for available_slot in available_slots:
         captcha = solve_captcha()
         post_payload = {
             "dose": 1,
-            "session_id": session_id,
-            "slot": slots[0],
+            "session_id": available_slot.get('session_id'),
+            "slot": available_slot.get('slots')[0],
             "beneficiaries": [benificiary],
             "captcha": captcha
         }
@@ -112,6 +126,3 @@ if __name__ == "__main__":
     print(available_slots)
     if available_slots:
         book_appointment(available_slots, TOKEN)
-
-
-
