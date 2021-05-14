@@ -7,7 +7,6 @@ import requests
 from requests import RequestException
 import subprocess, os, platform
 
-
 # how to get token:
 # login on cowin, open dev console -> applications -> session storage -> selfregistration.cowin.gov.in -> usertoken
 # fill this in
@@ -58,19 +57,19 @@ def parse_avalability(availability: dict):
     for center in availability['centers']:
         for session in center['sessions']:
             if session['min_age_limit'] < AGE_LIMIT and session["available_capacity"] > 0:
-                available_slot = {"session_id" : session['session_id'],
-                                   "slots": session['slots'],
+                available_slot = {"session_id": session['session_id'],
+                                  "slots": session['slots'],
                                   "name": center['name'],
-                                  "pincode": center['pincode'] }
+                                  "pincode": center['pincode'],
+                                  "date": session['date']
+                                  }
                 available_slots.append(available_slot)
 
     for count, available_slot in enumerate(available_slots):
         if PREFERRED_CITY.lower() in available_slot.get('name').lower():
-            available_slots.insert(0,  available_slots.pop(count))
-            continue
+            available_slots.insert(0, available_slots.pop(count))
         elif available_slot.get('pincode') == PREFERRED_PIN_CODE:
-            available_slots.insert(0,  available_slots.pop(count))
-            continue
+            available_slots.insert(0, available_slots.pop(count))
     return available_slots
 
 
@@ -78,7 +77,7 @@ def get_benificiary_from_token(token):
     _, data, _ = token.split('.')
     missing_padding = len(data) % 4
     if missing_padding:
-        data += '='*missing_padding
+        data += '=' * missing_padding
     decoded_data = base64.b64decode(data)
     json_data = json.loads(decoded_data)
     return json_data.get('beneficiary_reference_id')
@@ -88,6 +87,7 @@ def get_benificiary_from_token(token):
 def book_appointment(available_slots, token):
     benificiary = get_benificiary_from_token(token)
     for available_slot in available_slots:
+        log.info("trying to book %s", str(available_slot))
         captcha = solve_captcha()
         post_payload = {
             "dose": 1,
@@ -123,6 +123,6 @@ if __name__ == "__main__":
         TOKEN = sys.argv[1]
     availability = check_availability(district=DISTRICT, date=DATE)
     available_slots = parse_avalability(availability)
-    print(available_slots)
+    log.info(available_slots)
     if available_slots:
         book_appointment(available_slots, TOKEN)
