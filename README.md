@@ -2,7 +2,7 @@
 Code to send cowin vaccine slots availability notifications over telegram
 
 
-Steps:
+## Getting the bot running:
 
 1. Get a cloud VM. Oracle cloud gives two for free. Choose any India region while signing up. Other regions may get rate limited.
 2. install python,pip and telegram-send
@@ -20,3 +20,21 @@ Steps:
 6. Run the runme.sh in screen. This will keep polling the api and send a message in the group is slots are open.
    - run `screen` and then  `runme.sh`
    - if you want to keep getting messages for empty slots run `screen` and then `runme.sh debug`
+
+## How to book a slot
+
+autobook.py provides the means to check and book the first slot that is available. 
+
+Using it:
+1. Get a login token from cowin.
+ 
+   `login on cowin, open browser dev console -> applications -> session storage -> selfregistration.cowin.gov.in -> usertoken`
+2. Put the token in the TOKEN constant. Note that token will only be valid for 15 minutes.
+3. Enter the preferred city and pin code in the constants. From all the available slots for the district, the script will first try to book centers in this city and pin.
+4. Enter the district and date. 
+5. The code extracts the benificiary details from the token. If you want to book for someone else, change it in book_appointment()
+6. Run `python3 autobook.py`
+7. If slots are available, it will try to book it. Preferred timeslot will be the first one of the day 
+8. The captcha will be opened in the default program for svg files 
+9. Enter the captcha in the console
+10. Appointment id will be logged in the console. Can also check in cowin.
