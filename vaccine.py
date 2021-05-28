@@ -8,6 +8,8 @@ URL = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDi
 DISTRICTS = [151, 374]
 # search for age limit less than:
 AGE_LIMIT = 45
+DOSE=1
+
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"
 log = logging.getLogger()
 log.addHandler(logging.FileHandler("debug.log"))
@@ -17,13 +19,14 @@ log.setLevel(logging.INFO)
 def print_availability(data, debug_flag):
     for center in data['centers']:
         for session in center['sessions']:
+            ACKey = "available_capacity_dose{0}".format(DOSE)
             if session['min_age_limit'] < AGE_LIMIT:
                 if debug_flag:
                     print(
-                        f" {center['name']}, {center['district_name']} , {session['date']}, slots available: {session['available_capacity']}")
-                if not debug_flag and session['available_capacity'] != 0:
+                        f" {center['name']}, {center['district_name']} , {session['date']}, slots available: {session[ACKey]}")
+                if not debug_flag and session[ACKey] != 0:
                     print(
-                        f" {center['name']}, {center['district_name']} , {session['date']}, slots available: {session['available_capacity']}")
+                        f" {center['name']}, {center['district_name']} , {session['date']}, slots available: {session[ACKey]}")
 
 
 def check_availability(districts, debug_flag):
